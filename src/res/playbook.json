@@ -1,0 +1,23 @@
+{
+    "sections": [
+        {
+            "title": "Hazard Avoidance Strategies",
+            "bulletpoints": [
+                {
+                    "dbb7b9d8-2cd7-4344-9bbc-34a263d6a5ed": "Prioritize safe paths by analyzing the grid for 'H' (hazard) tiles before moving. Avoid any direct move onto 'H'. If a path segment contains 'H', seek an alternative route around it, such as moving parallel or finding a detour to reach 'G' without hitting hazards."
+                },
+                {
+                    "e8adab22-54a2-4d0d-83ca-a9a23aa1261b": "Before each move, evaluate the current position and the intended next position in the grid to confirm it is not an 'H' tile. Use the feedback from previous moves to update your understanding of the environment and adjust your path accordingly, always opting for safe tiles that bring you closer to 'G'."
+                }
+            ]
+        },
+        {
+            "title": "Feedback Integration Strategies",
+            "bulletpoints": [
+                {
+                    "2c0637bf-6a94-47bd-8e80-9d8218edd7df": "Incorporate feedback from each move to update the internal representation of the grid. After receiving the updated state, parse it to identify current position, hazards, and the goal, then plan the next safe move that progresses towards 'G' while avoiding 'H' tiles."
+                }
+            ]
+        }
+    ]
+}
