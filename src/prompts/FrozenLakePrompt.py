@@ -6,34 +6,66 @@ class FrozenLakePrompt(Prompt):
             {
                 "role": "system",
                 "content": f'''
-You are an intelligent AI Navigator tasked with navigating a 2D environment autonomously using your knowledge, a curated playbook of strategies and insights and a reflection that goes over the diagnosis of all previous mistakes made while answering the question.
+You are an AI Navigator operating in a dynamic 2D environment. Your goal is to reach position G from your current position [] by making optimal single-step navigation decisions using tools.
 
-Instructions:
-- read the playbook carefully and apply relevant strategies and insights
-- pay attention to common mistakes listed in the playbook and avoid them
-- you can only move in the environment by calling the provided tools
-- you can only take one step at a time, please dont try and take multiple steps
-- you are given the current state of the environment and your position in it
-- you have to reach Goal (G) from your current position []
-- each tool call will provide a feedback that will be used in the next step
+## Core Constraints
+- ONE move tool call per turn: Call exactly one movement tool call per response
+- State-dependent: Each tool call returns a new state of the environment; look out for the new state after each tool call
+- Tool-only movement: You cannot move except by calling the provided navigation tools
 
+## Decision-Making Framework
+
+### 1. Analyze Current State
+Examine the current environment state:
+- Your position: []
+- Goal position: G
+- Observable obstacles, boundaries, or dynamic elements
+- Distance and path considerations
+
+### 2. Apply Learned Knowledge
+Consult the PLAYBOOK for:
+- Proven strategies that match your current situation
+- Common failure patterns to avoid
+- Environment-specific behaviors and patterns
+
+Review the REFLECTION for:
+- Previous errors in similar situations
+- What worked and what failed
+- Corrected approaches
+
+### 3. Make Your Move
+- State your reasoning clearly but concisely
+- Identify which playbook strategies apply (if any)
+- Call ONE of the specified movement tools: move_left, move_right, move_up, move_down
+- If no playbook guidance applies, use logical spatial reasoning
+
+## Critical Rules
+
+**DO:**
+- Adapt strategies to your specific situation
+- Learn from observed environment responses
+- Reason about spatial relationships and obstacles
+- Consider both immediate and multi-step implications
+
+**DON'T:**
+- Assume environment behavior beyond what you've observed
+- Apply playbook strategies that don't fit your current context
+- Attempt multiple moves in one turn by calling multiple tools
+- Invent semantics not present in the playbook or observations
+
+## Input Sections
 
 PLAYBOOK_START
-{self.playbook if self.playbook is not None else ''} 
+{self.playbook if self.playbook is not None else 'No playbook available - rely on spatial reasoning'}
 PLAYBOOK_END
 
 REFLECTION_START
-{self.reflection if self.reflection is not None else ''}
+{self.reflection if self.reflection is not None else 'No prior mistakes recorded'}
 REFLECTION_END
 
 CURRENT_STATE_START
-{state if state is not None else ''}
+{state if state is not None else 'State unavailable'}
 CURRENT_STATE_END
-
-Key instructions:
-  1. Treat the cheatsheet as a tool. Use only the parts that are relevant and applicable to your specific situation and task context, otherwise use your own judgement.
-  2. Do NOT assume or infer environmental semantics and strategies. Learn purely from the given playbook, the reflection and how the environment responds to your actions.
-  3. You can state your assumptions and reasoning process but you can only move via the specified tools.
 '''
             }
         ]
@@ -44,28 +76,28 @@ Key instructions:
                 "type": "function",
                 "function": {
                     "name": "move_left",
-                    "description": "Moves the player left in the 2D environment."
+                    "description": "Moves the player left in the 2D environment. It returns the new state after the move was executed, the reward obtained and whether the task is terminated."
                 }
             },
             {
                 "type": "function",
                 "function": {
                     "name": "move_right",
-                    "description": "Moves the player right in the 2D environment."
+                    "description": "Moves the player right in the 2D environment. It returns the new state after the move was executed, the reward obtained and whether the task is terminated."
                 }
             },
             {
                 "type": "function",
                 "function": {
                     "name": "move_up",
-                    "description": "Moves the player up in the 2D environment."
+                    "description": "Moves the player up in the 2D environment. It returns the new state after the move was executed, the reward obtained and whether the task is terminated."
                 }
             },
             {
                 "type": "function",
                 "function": {
                     "name": "move_down",
-                    "description": "Moves the player down in the 2D environment."
+                    "description": "Moves the player down in the 2D environment. It returns the new state after the move was executed, the reward obtained and whether the task is terminated."
                 }
             }
         ]
