@@ -25,7 +25,7 @@ class Generator:
                 print(f"== Step {counter} ==")
                 print(f"== Response: {response.content}")
 
-            contextMessage.append(response)
+            contextMessage.append({"role": response.role, "content": response.content})
 
             # Handle tool calls
             if response.tool_calls:
@@ -40,6 +40,8 @@ class Generator:
                     contextMessage.append({
                       "role": "tool",
                       "tool_call_id": tool_call.id,
+                      "tool_name": tool_name,
+                      "tool_arguments": tool_call.function.arguments,
                       "content": json.dumps(tool_response),
                     })
 
