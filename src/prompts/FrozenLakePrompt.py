@@ -94,48 +94,56 @@ STATE_END
             {
                 "role": "system",
                 "content": f'''
-You are an expert 2D navigation agent. Your job is to diagnose why a model's navigation went wrong by analyzing the trajectory and the environments reaction: identify what went wrong (or could be better), grounded in execution feedback and function usage.
+You are an expert reflection agent analyzing a multi-turn navigation trajectory. The navigation agent operated iteratively: it received a trace, made ONE decision using guidance from a PLAYBOOK, got environment feedback, then was called again with the updated trace. Your job is to diagnose what went wrong across these iterations AND evaluate the playbook's effectiveness.
 
-Instructions:
-  - Carefully analyze the model's reasoning trace to identify where it went wrong 
-  - Take the environment feedback into account to understand the gap
-  - Identify specific conceptual errors, calculation mistakes, or misapplied strategies
-  - Provide actionable insights that could help the model avoid this mistake in the future
-  - Identify root causes: wrong source of truth, formatting issues and how to correct them.
-  - Provide concrete, step-by-step corrections the model should take in this task.
-  - Be specific about what the model should have done differently
-  - You will receive bulletpoints that are part of playbook that's used by the generator to navigate the environment
-  - You need to analyze these bulletpoints, and give the tag for each bulletpoint, tag can be ['helpful', 'harmful', 'neutral'] (for the generator to generate the correct answer)
-  - Explicitly curate from the environment feedback the output format/schema of functions used when unclear or mismatched with expectations
-  - Do NOT try to learn the layout of the environment because it will always change, focus on the strategies and function usage instead
+## Understanding the Multi-Turn Trace
+The NAVIGATION_TRAJECTORY shows:
+- Agent's reasoning at each turn (based on accumulated context and playbook)
+- Single action executed per turn
+- Environment's response after each action
+- How errors compounded or were corrected across iterations
 
-Inputs:
- - ACE playbook (playbook that's used by model for navigation task):
- 
+## Your Analysis Task
+1. **Trace the Decision Chain**: Follow how the agent interpreted its growing trace at each step
+2. **Analyze Playbook Usage**: 
+   - Which playbook strategies did the agent apply or ignore?
+   - Were strategies applied correctly in context?
+   - Did playbook guidance lead to success or failure?
+3. **Identify Breaking Points**: Where did reasoning diverge from optimal strategy?
+4. **Diagnose Root Causes**:
+   - Misinterpretation of previous feedback in the trace
+   - Incorrect state extraction from trajectory
+   - Misapplied or ignored playbook strategies
+   - Tool usage errors or format mismatches
+5. **Evaluate Each Playbook Bulletpoint**: Tag as 'helpful', 'harmful', or dont tag (skip) it if it was neutral based on:
+   - Did it guide the agent toward correct decisions?
+   - Did it cause errors or confusion?
+   - Was it irrelevant to the observed failure?
+
+## Critical Constraints
+✓ Explicitly assess each playbook item's impact on navigation
+✓ Focus on strategy and tool usage patterns (not environment layout—it changes)
+✓ Ground analysis in actual environment feedback, not assumptions
+✓ Provide actionable corrections applicable to future multi-turn episodes
+✗ Don't learn specific positions or obstacle locations
+
+## Inputs
 NAVIGATION_TRAJECTORY_BEGIN
 {self.generatorOutput if self.generatorOutput is not None else ''}
 NAVIGATION_TRAJECTORY_END
- 
-PLAYBOOK_BEGIN
-{self.playbook if self.playbook is not None else ''} 
-PLAYBOOK_END
- 
-Outputs:
-Your output should be a json object, which contains the following fields
-  - reasoning: your chain of thought / reasoning / thinking process, detailed analysis and calculations
-  - error_identification: what specifically went wrong in the reasoning?
-  - root_cause_analysis: why did this error occur? What concept was misunderstood?
-  - correct_approach: what should the model have done instead?
-  - key_insight: what strategy, formula, or principle should be remembered to avoid this error?
 
-Answer in this exact JSON format:
+PLAYBOOK_BEGIN
+{self.playbook if self.playbook is not None else ''}
+PLAYBOOK_END
+
+## Required Output (JSON only)
 {{
-  "reasoning": "[Your chain of thought / reasoning / thinking process, detailed analysis and calculations]",
-  "error_identification": "[What specifically went wrong in the reasoning?]",
-  "root_cause_analysis": "[Why did this error occur? What concept was misunderstood?]",
-  "correct_approach": "[What should the model have done instead?]",
-  "key_insight": "[What strategy, formula, or principle should be remembered to avoid this error?]",
-  "bullet_tags": [ {{"id": "09sdf0981340", "tag": "helpful"}}, {{"id": "90ß324823094", "tag": "harmful"}} ]
+  "reasoning": "[Trace the multi-turn decision chain: what did the agent observe, decide, and receive as feedback at each iteration? Which playbook strategies were applied? Where did the reasoning break down?]",
+  "error_identification": "[Specific mistakes in trace interpretation, playbook application, tool usage, or strategy selection across turns]",
+  "root_cause_analysis": "[Why did the agent fail to learn from its growing trace? What concept about multi-turn operation was misunderstood? Were playbook strategies misleading or misapplied?]",
+  "correct_approach": "[Step-by-step: how should the agent have processed the trace, applied playbook guidance, and made decisions differently?]",
+  "key_insight": "[Generalizable strategy for multi-turn navigation: principles for trace interpretation, feedback integration, playbook usage, or tool usage]",
+  "bullet_tags": [{{"id": "example_id", "tag": "helpful|harmful"}}]
 }}
 '''
             }
