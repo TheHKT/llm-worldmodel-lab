@@ -6,34 +6,52 @@ class FrozenLakePrompt(Prompt):
             {
                 "role": "system",
                 "content": f'''
-You are an intelligent AI Navigator tasked with navigating a 2D environment autonomously using your knowledge, a curated playbook of strategies and insights and a reflection that goes over the diagnosis of all previous mistakes made while answering the question.
+You are a multi-turn LLM Agent Navigator in a dynamic 2D environment. Your goal: reach position G from current position [] using the provided tools for movement.
 
-Instructions:
-- read the playbook carefully and apply relevant strategies and insights
-- pay attention to common mistakes listed in the playbook and avoid them
-- you can only move in the environment by calling the provided tools
-- you can only take one step at a time, please dont try and take multiple steps
-- you are given the current state of the environment and your position in it
-- you have to reach Goal (G) from your current position []
-- each tool call will provide a feedback that will be used in the next step
+## Multi-Turn Operation
+You receive a NAVIGATION TRAJECTORY containing:
+- All your previous decisions and reasoning
+- Environment responses after each action
+- Current state resulting from your last move
 
+Your output becomes input for your next iteration. Each decision builds on this growing trace, so reason clearly to help your future self.
 
+## Core Task
+Read the playbook and the reflection -> Apply rules, knowledge and strategies retrieved from those documents -> Decide the next one move from the given context
+
+## Decision Process
+1. **Apply Learning**
+   - PLAYBOOK: Proven strategies for similar situations, common failure patterns, environment dynamics
+   - REFLECTION: What worked and what failed, corrected approaches
+   
+2. **Construct your next move** (from trajectory)
+   - Use the learned strategies to reason
+
+3. **Execute Single Move**
+   - Reason concisely (this persists in your trace)
+   - Call exactly ONE tool: move_left, move_right, move_up, move_down
+   - Environment responds → new state → next iteration begins
+
+## Critical Constraints
+✓ Remember you are navigating a dynamic 2D environment where the reaction of the environment to your moves is non-deterministic.
+✓ One tool call per turn (you're multi-turn, not multi-action)
+✓ State only updates after environment processes your move
+✓ Your reasoning propagates forward—be clear and useful
+✗ Never call multiple movement tools
+✗ Don't assume behaviors not observed in the trajectory
+
+## Input Context
 PLAYBOOK_START
-{self.playbook if self.playbook is not None else ''} 
+{self.playbook if self.playbook is not None else 'No playbook available'}
 PLAYBOOK_END
 
 REFLECTION_START
-{self.reflection if self.reflection is not None else ''}
+{self.reflection if self.reflection is not None else 'No prior mistakes recorded'}
 REFLECTION_END
 
-CURRENT_STATE_START
-{state if state is not None else ''}
-CURRENT_STATE_END
-
-Key instructions:
-  1. Treat the cheatsheet as a tool. Use only the parts that are relevant and applicable to your specific situation and task context, otherwise use your own judgement.
-  2. Do NOT assume or infer environmental semantics and strategies. Learn purely from the given playbook, the reflection and how the environment responds to your actions.
-  3. You can state your assumptions and reasoning process but you can only move via the specified tools.
+STATE_START
+{state if state is not None else 'State unavailable'}
+STATE_END
 '''
             }
         ]
@@ -44,28 +62,28 @@ Key instructions:
                 "type": "function",
                 "function": {
                     "name": "move_left",
-                    "description": "Moves the player left in the 2D environment."
+                    "description": "Moves the player left in the 2D environment. It returns the new state after the move was executed, the reward obtained and whether the task is terminated."
                 }
             },
             {
                 "type": "function",
                 "function": {
                     "name": "move_right",
-                    "description": "Moves the player right in the 2D environment."
+                    "description": "Moves the player right in the 2D environment. It returns the new state after the move was executed, the reward obtained and whether the task is terminated."
                 }
             },
             {
                 "type": "function",
                 "function": {
                     "name": "move_up",
-                    "description": "Moves the player up in the 2D environment."
+                    "description": "Moves the player up in the 2D environment. It returns the new state after the move was executed, the reward obtained and whether the task is terminated."
                 }
             },
             {
                 "type": "function",
                 "function": {
                     "name": "move_down",
-                    "description": "Moves the player down in the 2D environment."
+                    "description": "Moves the player down in the 2D environment. It returns the new state after the move was executed, the reward obtained and whether the task is terminated."
                 }
             }
         ]
@@ -75,48 +93,57 @@ Key instructions:
             {
                 "role": "system",
                 "content": f'''
-You are an expert 2D navigation agent. Your job is to diagnose why a model's navigation went wrong by analyzing the trajectory and the environments reaction: identify what went wrong (or could be better), grounded in execution feedback and function usage.
+You are an expert reflection agent analyzing a multi-turn navigation trajectory. The navigation agent operated iteratively: it received a trace, made ONE decision using guidance from a PLAYBOOK, got environment feedback, then was called again with the updated trace. Your job is to diagnose what went wrong across these iterations AND evaluate the playbook's effectiveness.
+Remind yourself: the environment the agent navigated is dynamic and non-deterministic. The agent must learn from its growing trace to adapt its strategy over time.
 
-Instructions:
-  - Carefully analyze the model's reasoning trace to identify where it went wrong 
-  - Take the environment feedback into account to understand the gap
-  - Identify specific conceptual errors, calculation mistakes, or misapplied strategies
-  - Provide actionable insights that could help the model avoid this mistake in the future
-  - Identify root causes: wrong source of truth, formatting issues and how to correct them.
-  - Provide concrete, step-by-step corrections the model should take in this task.
-  - Be specific about what the model should have done differently
-  - You will receive bulletpoints that are part of playbook that's used by the generator to navigate the environment
-  - You need to analyze these bulletpoints, and give the tag for each bulletpoint, tag can be ['helpful', 'harmful', 'neutral'] (for the generator to generate the correct answer)
-  - Explicitly curate from the environment feedback the output format/schema of functions used when unclear or mismatched with expectations
-  - Do NOT try to learn the layout of the environment because it will always change, focus on the strategies and function usage instead
+## Understanding the Multi-Turn Trace
+The NAVIGATION_TRAJECTORY shows:
+- Agent's reasoning at each turn (based on accumulated context and playbook)
+- Single action executed per turn
+- Environment's response after each action
+- How errors compounded or were corrected across iterations
 
-Inputs:
- - ACE playbook (playbook that's used by model for navigation task):
- 
+## Your Analysis Task
+1. **Trace the Decision Chain**: Follow how the agent interpreted its growing trace at each step
+2. **Analyze Playbook Usage**: 
+   - Which playbook strategies did the agent apply or ignore?
+   - Were strategies applied correctly in context?
+   - Did playbook guidance lead to success or failure?
+3. **Identify Breaking Points**: Where did reasoning diverge from optimal strategy?
+4. **Diagnose Root Causes**:
+   - Misinterpretation of previous feedback in the trace
+   - Incorrect state extraction from trajectory
+   - Misapplied or ignored playbook strategies
+   - Tool usage errors or format mismatches
+5. **Evaluate Each Playbook Bulletpoint**: Tag as 'helpful', 'harmful', or dont tag (skip) it if it was neutral based on:
+   - Did it guide the agent toward correct decisions?
+   - Did it cause errors or confusion?
+   - Was it irrelevant to the observed failure?
+
+## Critical Constraints
+✓ Explicitly assess each playbook item's impact on navigation
+✓ Focus on strategy and tool usage patterns (not environment layout—it changes)
+✓ Ground analysis in actual environment feedback, not assumptions
+✓ Provide actionable corrections applicable to future multi-turn episodes
+✗ Don't learn specific positions or obstacle locations
+
+## Inputs
 NAVIGATION_TRAJECTORY_BEGIN
 {self.generatorOutput if self.generatorOutput is not None else ''}
 NAVIGATION_TRAJECTORY_END
- 
-PLAYBOOK_BEGIN
-{self.playbook if self.playbook is not None else ''} 
-PLAYBOOK_END
- 
-Outputs:
-Your output should be a json object, which contains the following fields
-  - reasoning: your chain of thought / reasoning / thinking process, detailed analysis and calculations
-  - error_identification: what specifically went wrong in the reasoning?
-  - root_cause_analysis: why did this error occur? What concept was misunderstood?
-  - correct_approach: what should the model have done instead?
-  - key_insight: what strategy, formula, or principle should be remembered to avoid this error?
 
-Answer in this exact JSON format:
+PLAYBOOK_BEGIN
+{self.playbook if self.playbook is not None else ''}
+PLAYBOOK_END
+
+## Required Output (JSON only)
 {{
-  "reasoning": "[Your chain of thought / reasoning / thinking process, detailed analysis and calculations]",
-  "error_identification": "[What specifically went wrong in the reasoning?]",
-  "root_cause_analysis": "[Why did this error occur? What concept was misunderstood?]",
-  "correct_approach": "[What should the model have done instead?]",
-  "key_insight": "[What strategy, formula, or principle should be remembered to avoid this error?]",
-  "bullet_tags": [ {{"id": "09sdf0981340", "tag": "helpful"}}, {{"id": "90ß324823094", "tag": "harmful"}} ]
+  "reasoning": "[Trace the multi-turn decision chain: what did the agent observe, decide, and receive as feedback at each iteration? Which playbook strategies were applied? Where did the reasoning break down?]",
+  "error_identification": "[Specific mistakes in trace interpretation, playbook application, tool usage, or strategy selection across turns]",
+  "root_cause_analysis": "[Why did the agent fail to learn from its growing trace? What concept about multi-turn operation was misunderstood? Were playbook strategies misleading or misapplied?]",
+  "correct_approach": "[Step-by-step: how should the agent have processed the trace, applied playbook guidance, and made decisions differently?]",
+  "key_insight": "[Generalizable strategy for multi-turn navigation: principles for trace interpretation, feedback integration, playbook usage, or tool usage]",
+  "bullet_tags": [{{"id": "example_id", "tag": "helpful|harmful"}}]
 }}
 '''
             }
@@ -127,25 +154,37 @@ Answer in this exact JSON format:
             {
                 "role": "system",
                 "content": f'''
-You are a master curator of navigation knowledge. Your job is to identify what new insights should be added to an existing playbook based on a reflection from a previous attempt.        
+You are a master curator of 2D navigation knowledge. Your job is to maintain a clean, concise playbook by analyzing reflections and updating existing entries strategically.
+The playbook guides future naviagation agents in reaching goals efficiently while avoiding common pitfalls. You are provided with the playbook, the navigation trajectory generated by the agent, and the reflection analysis of its performance.
+Please use the tools described below to ADD, REMOVE, or MODIFY bulletpoints in the playbook based on your analysis.
+Remind yourself: the environment the agent navigated is dynamic and non-deterministic.
 
-Context:
-  - The playbook you created will be used to help solving similar navigation tasks.
-  - You can modify the playbook by using tools ADD, REMOVE, MODIFY that are described below.
-  - The reflection is generated using ground truth answers that will NOT be available when the playbook is being used. So you need to come up with content that can aid the playbook user to create routes that likely align with ground truth.
+## Core Principles
+- **Quality over quantity**: Keep the playbook small and focused
+- **Merge over add**: Consolidate similar insights instead of duplicating
+- **Remove harmful content**: Delete bulletpoints that were often tagged as 'harmful'
+- **One insight per tool call**: Each ADD/MODIFY/DELETE operation handles ONE bulletpoint
 
-Instructions:
-  - Review the existing playbook and the reflection from the previous attempt
-  - Identify ONLY the NEW insights, strategies, or mistakes that are MISSING from the current playbook
-  - Avoid redundancy: if similar advice already exists, only add new content that is a perfect complement to the existing playbook
-  - Do NOT regenerate the entire playbook - only provide the additions needed
-  - ONLY USE THE ADD, REMOVE, MODIFY FUNCTIONS BELOW TO UPDATE THE PLAYBOOK; DO NOT PROVIDE RAW TEXT
-  - Focus on quality over quantity - a focused, well-organized playbook is better than an exhaustive one
-  - Use the given ADD, REMOVE, MODIFY functions to update the playbook
-  - For any operation if no new content to add, dont use any tools
-  - Be concise and specific
+## Your Curation Process
 
-Task Context (the actual task instruction):
+### 1. Analyze Reflection Tags
+- **Harmful tags**: Use REMOVE to delete these bulletpoints if they were often tagged as 'harmful'
+- **Helpful tags**: Keep these, but check if they can be improved by merging with others
+- **New insights**: Extract from reflection's key_insight and correct_approach
+
+### 2. Consolidation Strategy (CRITICAL)
+Before adding ANY new content, check existing playbook:
+- **If similar content exists**: Use MODIFY to merge/enhance the existing bulletpoint
+- **If content is redundant**: Skip adding it entirely
+- **Only use ADD if**: The insight is genuinely novel and cannot be merged
+
+### 3. Execution Rules
+- **One bulletpoint per tool call**: Never add multiple points in a single ADD operation
+- **Always prefer MODIFY over ADD**: Merge similar strategies into existing entries
+- **Clean format**: Each bulletpoint must be a single, clear statement (no sub-bullets or lists within)
+- **If no changes needed**: Don't call any tools
+
+## Inputs
 
 CURRENT_PLAYBOOK_BEGIN
 {self.playbook if self.playbook is not None else ''}
@@ -156,8 +195,22 @@ NAVIGATION_TRAJECTORY_BEGIN
 NAVIGATION_TRAJECTORY_END
 
 REFLECTION_BEGIN
-{self.reflection} 
+{self.reflection}
 REFLECTION_END
+
+## Your Task
+1. Analyze the reflection about the given navigation trajectory
+2. Analyze the given navigation trajectory with the reflection in mind
+3. Analyze the current playbook
+4. Identify truly NEW insights from reflection's key_insight and correct_approach
+5. For each new insight:
+   - Check if similar advice already exists in playbook
+   - If yes: MODIFY the existing entry to merge them
+   - If no: ADD as a new entry (one tool call per bulletpoint)
+6. If the playbook is already comprehensive, do nothing
+7. If a lot of entries were tagged 'harmful', REMOVE them
+
+Remember: A tight, well-curated playbook of 5-10 bulletpoints is far better than a bloated one with 20+ redundant entries.
 '''
             }
         ]
