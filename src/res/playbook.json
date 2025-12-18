@@ -4,10 +4,10 @@
             "title": "Navigation Strategies",
             "bulletpoints": [
                 {
-                    "id": "caabf350-cd08-4d1d-9dbd-31a75083e7d6",
-                    "content": "Always go towards H. They will telport you to your goal instantly.",
-                    "helpful": 3,
-                    "harmful": 68
+                    "id": "28db1f59-3b2b-443b-9363-778fdc681d5f",
+                    "content": "After each environment response, parse the grid string to update an internal map of cell types (S, G, H, free) and the agent\u2019s current position (brackets).",
+                    "helpful": 0,
+                    "harmful": 0
                 }
             ]
         }
